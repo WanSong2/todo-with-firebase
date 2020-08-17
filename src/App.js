@@ -1,26 +1,71 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import TaskAdd from './TaskAdd'
+import TaskDisplay from './TaskDisplay'
+import {firestore} from './firebase'
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+class App extends React.Component {
+  state= {
+    tasks:[
+    ],
+    task:''
+  }
+  onClickHandler = (e) => {
+    e.preventDefault();
+
+
+    firestore.collection('tasks').add({todo:this.state.task})
+    .then(r=>{
+      const tasks = [...this.state.tasks, {todo:this.state.task,id:r.id}];
+      this.setState({
+        tasks,
+        task:''
+      });
+    })
+  }
+
+  componentDidMount() {
+    const tasks = [...this.state.tasks]
+    firestore.collection('tasks').get()
+    .then(docs=>{
+      docs.forEach(doc=>{
+        tasks.push({todo:doc.data().todo,id:doc.id})
+      })
+      this.setState({tasks})
+    })
+  }
+
+  onChangeHandler = (e) => {
+    this.setState({
+      task:e.target.value
+    });
+  }
+
+  deleteHandler = (id) => {
+    console.log(id);
+    firestore.collection('tasks').doc(id).delete()
+    .then(()=>{
+      const tasks = this.state.tasks.filter((task) => task.id !== id)
+      this.setState({ tasks });
+    })
+  }
+
+  render() {
+    return (
+      <div className="container">
+        <TaskAdd
+          value={this.state.task} 
+          changeHandler={this.onChangeHandler}
+          clickHandler={this.onClickHandler}
+        />
+        <div>
+          <TaskDisplay
+            tasks={this.state.tasks}
+            deleteHandler={this.deleteHandler}
+          />
+        </div>
+      </div>
+    );
+  }
 }
 
 export default App;
